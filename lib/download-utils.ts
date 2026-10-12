@@ -34,7 +34,7 @@ export function downloadBytes(
   filename: string,
   mimeType = 'application/octet-stream'
 ): void {
-  const blob = new Blob([bytes.buffer as ArrayBuffer], { type: mimeType });
+  const blob = new Blob([bytes as BlobPart], { type: mimeType });
   downloadBlob(blob, filename);
 }
 

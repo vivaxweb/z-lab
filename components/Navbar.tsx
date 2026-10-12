@@ -8,6 +8,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { HubsDrawer } from '@/components/HubsDrawer';
 import { FavoritesDrawer } from '@/components/FavoritesDrawer';
 import { PwaRegister } from '@/components/PwaRegister';
+import { useAuth } from '@/lib/auth-context';
 import {
   Search,
   Star,
@@ -15,10 +16,13 @@ import {
   Layers,
   Bell,
   Cpu,
+  User,
+  Lock,
 } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, isAdminSessionActive } = useAuth();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isHubsOpen, setIsHubsOpen] = useState(false);
   const [isFavsOpen, setIsFavsOpen] = useState(false);
@@ -130,6 +134,39 @@ export function Navbar() {
 
             {/* PWA Install */}
             <PwaRegister />
+
+            {/* Admin Session Quick Indicator (if active) */}
+            {isAdminSessionActive && (
+              <Link
+                href="/adminvivax"
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1E1B24] text-[#D4F84B] text-[11px] font-bold shadow-sm"
+                title="Vivax Admin Portal Active"
+              >
+                <Lock className="w-3 h-3" />
+                <span>Admin</span>
+              </Link>
+            )}
+
+            {/* User Account / Login Button */}
+            {user ? (
+              <Link
+                href="/account"
+                className="flex items-center gap-2 p-1.5 rounded-full hover:bg-neutral-100 transition border border-black/5"
+                title={`Account: ${user.displayName}`}
+              >
+                <div className="w-7 h-7 rounded-full bg-[#1E1B24] text-white font-black text-xs flex items-center justify-center">
+                  {user.displayName.charAt(0).toUpperCase()}
+                </div>
+              </Link>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1E1B24] text-white text-xs font-bold hover:opacity-90 transition shadow-sm"
+              >
+                <User className="h-3.5 w-3.5 text-[#D4F84B]" />
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
+            )}
           </div>
         </div>
       </header>

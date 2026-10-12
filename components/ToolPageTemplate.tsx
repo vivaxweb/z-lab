@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import type { ToolConfig } from '@/lib/tools-registry';
 import { CATEGORY_INFO } from '@/lib/tools-registry';
-import { ShieldCheck, Star, ArrowLeft, Sparkles } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { AdminStore } from '@/lib/admin-store';
+import { ShieldCheck, Star, ArrowLeft, Sparkles, AlertTriangle, Wrench, MessageSquare } from 'lucide-react';
 
 export interface ToolPageTemplateProps {
   tool: ToolConfig;
@@ -14,35 +16,24 @@ export interface ToolPageTemplateProps {
 
 export function ToolPageTemplate({ tool, children, seoContent }: ToolPageTemplateProps) {
   const cat = CATEGORY_INFO[tool.category];
-  const [isFav, setIsFav] = useState(false);
+  const { toggleFavorite, favorites, addRecentTool } = useAuth();
+  const isFav = favorites.includes(tool.slug);
+  const [override, setOverride] = useState<{ enabled?: boolean; isMaintenance?: boolean; maintenanceMessage?: string }>({});
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('zlab_favorites');
-      if (saved) {
-        const arr = JSON.parse(saved);
-        if (arr.includes(tool.slug)) setIsFav(true);
+      addRecentTool(tool.slug);
+      const overrides = AdminStore.getToolOverrides();
+      if (overrides[tool.slug]) {
+        setOverride(overrides[tool.slug]);
       }
     } catch {
       // ignore
     }
-  }, [tool.slug]);
+  }, [tool.slug, addRecentTool]);
 
   const toggleFav = () => {
-    try {
-      const saved = localStorage.getItem('zlab_favorites');
-      let arr: string[] = saved ? JSON.parse(saved) : [];
-      if (arr.includes(tool.slug)) {
-        arr = arr.filter((s) => s !== tool.slug);
-        setIsFav(false);
-      } else {
-        arr.push(tool.slug);
-        setIsFav(true);
-      }
-      localStorage.setItem('zlab_favorites', JSON.stringify(arr));
-    } catch {
-      // ignore
-    }
+    toggleFavorite(tool.slug);
   };
 
   return (
@@ -117,12 +108,54 @@ export function ToolPageTemplate({ tool, children, seoContent }: ToolPageTemplat
         </header>
 
         {/* ── Tool Interactive Workspace Card ──────────────────────────────── */}
-        <section
-          aria-label="Tool workspace"
-          className="mindmate-card p-6 sm:p-10"
-        >
-          {children}
-        </section>
+        {override.enabled === false ? (
+          <section
+            aria-label="Tool disabled"
+            className="mindmate-card p-8 sm:p-12 text-center space-y-4 border-2 border-rose-200 bg-rose-50/20"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 mx-auto flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-[#1E1B24]">Tool Temporarily Offline</h3>
+              <p className="text-xs text-neutral-500 mt-1 max-w-md mx-auto">
+                This utility is undergoing server maintenance or system updates. Please check back shortly or explore our other tools.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1E1B24] text-white text-xs font-bold hover:opacity-90 transition"
+            >
+              Browse Other Tools
+            </Link>
+          </section>
+        ) : (
+          <section
+            aria-label="Tool workspace"
+            className="mindmate-card p-6 sm:p-10 space-y-4"
+          >
+            {override.isMaintenance && (
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  Notice: {override.maintenanceMessage || 'This tool is in maintenance mode. Some features may experience delays.'}
+                </span>
+              </div>
+            )}
+            {children}
+
+            <div className="pt-4 border-t border-neutral-100 flex items-center justify-between text-[11px] text-neutral-400">
+              <span>Runs 100% locally on your machine</span>
+              <Link
+                href="/account"
+                className="hover:text-neutral-700 transition flex items-center gap-1 font-semibold"
+              >
+                <MessageSquare className="w-3 h-3" />
+                <span>Report an issue with this tool</span>
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* ── SEO / Educational Content ────────────────────────────────────── */}
         {seoContent && (

@@ -13,20 +13,27 @@ export function PdfRotatorTool() {
   const [rotations, setRotations] = useState<number[]>([]); // rotation angle in degrees for each page (0, 90, 180, 270)
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (files: File[]) => {
     if (files.length === 0) return;
     const selected = files[0];
     setFile(selected);
     setResultBlob(null);
+    setError(null);
 
     try {
       const buffer = await selected.arrayBuffer();
       const count = await getPdfPageCount(buffer);
       setPageCount(count);
       setRotations(new Array(count).fill(0));
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to read PDF page count', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not read PDF. Document may be encrypted or corrupted.'
+      );
     }
   };
 
@@ -53,13 +60,15 @@ export function PdfRotatorTool() {
   const handleProcess = async () => {
     if (!file || pageCount === 0) return;
     setIsProcessing(true);
+    setError(null);
     try {
       const buffer = await file.arrayBuffer();
       const rotatedBytes = await rotatePdfPages(buffer, rotations);
-      const blob = new Blob([rotatedBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+      const blob = new Blob([rotatedBytes as BlobPart], { type: 'application/pdf' });
       setResultBlob(blob);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to rotate PDF', err);
+      setError(err instanceof Error ? err.message : 'Failed to rotate PDF pages.');
     } finally {
       setIsProcessing(false);
     }
@@ -74,6 +83,12 @@ export function PdfRotatorTool() {
         accept=".pdf,application/pdf"
         label="Upload a PDF to permanently rotate pages"
       />
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 flex items-center gap-2">
+          <span>{error}</span>
+        </div>
+      )}
 
       {file && pageCount > 0 && (
         <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">

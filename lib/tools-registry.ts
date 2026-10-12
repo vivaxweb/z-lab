@@ -554,3 +554,6 @@ export function getToolBySlug(slug: string): ToolConfig | undefined {
 export function getToolsByCategory(category: ToolCategory): ToolConfig[] {
   return toolsRegistry.filter((t) => t.category === category);
 }
+
+/** Alias for toolsRegistry */
+export const TOOLS = toolsRegistry;

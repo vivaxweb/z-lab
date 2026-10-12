@@ -30,7 +30,7 @@ export function QrScannerTool() {
       // Check if native BarcodeDetector is available
       if ('BarcodeDetector' in window) {
         // @ts-expect-error BarcodeDetector browser API
-        const detector = new window.BarcodeDetector({ formats: ['qr_code', 'barcode'] });
+        const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
         const barcodes = await detector.detect(img);
         if (barcodes.length > 0) {
           setScanResult(barcodes[0].rawValue);
@@ -38,8 +38,8 @@ export function QrScannerTool() {
           setError('No QR code detected in this image. Try an image with higher contrast or closer crop.');
         }
       } else {
-        // Fallback message for older browsers without native BarcodeDetector
-        setError('Your browser does not have the native BarcodeDetector enabled. Ensure you are on modern Chrome, Edge, or Safari.');
+        // Fallback message for browsers without native BarcodeDetector
+        setError('Your browser does not support the native BarcodeDetector API. Try modern Chrome, Edge, or Android Chrome.');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error decoding image.');

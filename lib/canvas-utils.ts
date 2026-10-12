@@ -77,6 +77,10 @@ export async function resizeImage(file: File | Blob, options: ResizeOptions): Pr
   canvas.height = targetH;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable.');
+  if (format === 'image/jpeg') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+  }
   ctx.drawImage(img, 0, 0, targetW, targetH);
 
   return canvasToBlob(canvas, format, quality);
@@ -107,9 +111,164 @@ export async function compressImage(file: File | Blob, options: CompressOptions 
   canvas.height = targetH;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context unavailable.');
+  if (format === 'image/jpeg') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+  }
   ctx.drawImage(img, 0, 0, targetW, targetH);
 
   return canvasToBlob(canvas, format, quality);
+}
+
+export interface SmartCompressOptions {
+  /** Target quality 0.1 to 1.0 (default: 0.72) */
+  quality?: number;
+  /** Output format; 'auto' selects the optimal format between WebP and JPEG */
+  format?: 'auto' | ImageOutputFormat;
+  /** Max pixel width (aspect ratio is preserved) */
+  maxWidth?: number;
+  /** Max pixel height (aspect ratio is preserved) */
+  maxHeight?: number;
+  /** Target file size in kilobytes (optional) */
+  targetSizeKb?: number;
+}
+
+export interface SmartCompressResult {
+  blob: Blob;
+  format: ImageOutputFormat;
+  width: number;
+  height: number;
+  size: number;
+  originalSize: number;
+  savedPercent: number;
+  wasAdapted: boolean;
+  isLargerThanOriginal: boolean;
+}
+
+/**
+ * Intelligent image compression that prevents file size inflation,
+ * selects the optimal web format, and optionally targets a maximum KB size.
+ */
+export async function smartCompressImage(
+  file: File | Blob,
+  options: SmartCompressOptions = {}
+): Promise<SmartCompressResult> {
+  const img = await loadImage(file);
+  const origSize = file.size;
+
+  let targetW = img.naturalWidth;
+  let targetH = img.naturalHeight;
+
+  if (options.maxWidth && options.maxWidth > 0 && targetW > options.maxWidth) {
+    targetH = Math.round((targetH * options.maxWidth) / targetW);
+    targetW = options.maxWidth;
+  }
+  if (options.maxHeight && options.maxHeight > 0 && targetH > options.maxHeight) {
+    targetW = Math.round((targetW * options.maxHeight) / targetH);
+    targetH = options.maxHeight;
+  }
+
+  // Helper to render and export to blob
+  const render = (fmt: ImageOutputFormat, q: number, w: number, h: number): Promise<Blob> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+    if (fmt === 'image/jpeg') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvasToBlob(canvas, fmt, q);
+  };
+
+  const requestedFormat = options.format ?? 'auto';
+  let targetQuality = Math.min(1.0, Math.max(0.1, options.quality ?? 0.72));
+
+  // If targetSizeKb is set, iterate to meet the size limit
+  if (options.targetSizeKb && options.targetSizeKb > 0) {
+    const maxBytes = options.targetSizeKb * 1024;
+    const testFmt: ImageOutputFormat =
+      requestedFormat === 'auto' ? 'image/webp' : requestedFormat;
+
+    let bestBlob: Blob | null = null;
+    let currW = targetW;
+    let currH = targetH;
+    let currQ = targetQuality;
+
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const b = await render(testFmt, currQ, currW, currH);
+      bestBlob = b;
+      if (b.size <= maxBytes) {
+        break;
+      }
+      if (currQ > 0.3) {
+        currQ = Math.max(0.2, currQ - 0.15);
+      } else {
+        // Downscale dimensions slightly if quality alone isn't enough
+        currW = Math.round(currW * 0.85);
+        currH = Math.round(currH * 0.85);
+      }
+    }
+
+    const finalBlob = bestBlob ?? (await render(testFmt, currQ, currW, currH));
+    return {
+      blob: finalBlob,
+      format: testFmt,
+      width: currW,
+      height: currH,
+      size: finalBlob.size,
+      originalSize: origSize,
+      savedPercent: origSize > 0 ? Math.round(((origSize - finalBlob.size) / origSize) * 100) : 0,
+      wasAdapted: true,
+      isLargerThanOriginal: finalBlob.size >= origSize,
+    };
+  }
+
+  // Standard compression: test format & prevent file inflation
+  let chosenFormat: ImageOutputFormat =
+    requestedFormat === 'auto' ? 'image/webp' : requestedFormat;
+
+  let blob = await render(chosenFormat, targetQuality, targetW, targetH);
+  let wasAdapted = false;
+
+  // If 'auto' mode and WebP was larger than original, also try JPEG
+  if (requestedFormat === 'auto' && blob.size >= origSize) {
+    const jpegBlob = await render('image/jpeg', targetQuality, targetW, targetH);
+    if (jpegBlob.size < blob.size) {
+      blob = jpegBlob;
+      chosenFormat = 'image/jpeg';
+    }
+  }
+
+  // If the result is still larger than the original image:
+  // Automatically step down quality to achieve genuine compression
+  if (blob.size >= origSize && chosenFormat !== 'image/png') {
+    const stepQualities = [0.65, 0.5, 0.4, 0.3];
+    for (const q of stepQualities) {
+      if (q >= targetQuality) continue;
+      const testBlob = await render(chosenFormat, q, targetW, targetH);
+      if (testBlob.size < origSize) {
+        blob = testBlob;
+        targetQuality = q;
+        wasAdapted = true;
+        break;
+      }
+    }
+  }
+
+  return {
+    blob,
+    format: chosenFormat,
+    width: targetW,
+    height: targetH,
+    size: blob.size,
+    originalSize: origSize,
+    savedPercent: origSize > 0 ? Math.round(((origSize - blob.size) / origSize) * 100) : 0,
+    wasAdapted,
+    isLargerThanOriginal: blob.size >= origSize,
+  };
 }
 
 /**

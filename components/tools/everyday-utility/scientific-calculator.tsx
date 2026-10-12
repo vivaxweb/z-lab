@@ -86,6 +86,7 @@ export function ScientificCalculatorTool() {
       if (/[^0-9+\-*/().%\s^]/.test(expr)) {
         throw new Error('Invalid expression');
       }
+      expr = expr.replace(/(\d+(\.\d+)?)%/g, '($1/100)');
       expr = expr.replace(/\^/g, '**');
 
       const result = Function(`'use strict'; return (${expr})`)();

@@ -5,6 +5,9 @@ import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { FooterYear } from '@/components/FooterYear';
 import { ShieldCheck, Zap, Lock, BatteryCharging } from 'lucide-react';
 
+import { AuthProvider } from '@/lib/auth-context';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
+
 export const metadata: Metadata = {
   title: {
     default: 'Z Lab — Free Privacy-First Browser Tools for Gen Z',
@@ -30,14 +33,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full antialiased scroll-smooth">
       <body className="flex min-h-full flex-col bg-[#FDFCF9] text-[#111116] selection:bg-[#FFE500] selection:text-[#111116]">
-        {/* ── Global Neo-Pop Header ────────────────────────────────────────── */}
-        <Navbar />
+        <AuthProvider>
+          {/* ── Global Announcement Bar from Admin ───────────────────────────── */}
+          <AnnouncementBanner />
 
-        {/* ── Page Content (pb-24 on mobile so bottom bar doesn't obscure content) ─ */}
-        <div className="flex flex-1 flex-col pb-20 sm:pb-0">{children}</div>
+          {/* ── Global Neo-Pop Header ────────────────────────────────────────── */}
+          <Navbar />
 
-        {/* ── Global Floating Mobile Navigation Bar ────────────────────────── */}
-        <MobileBottomNav />
+          {/* ── Page Content (pb-24 on mobile so bottom bar doesn't obscure content) ─ */}
+          <div className="flex flex-1 flex-col pb-20 sm:pb-0">{children}</div>
+
+          {/* ── Global Floating Mobile Navigation Bar ────────────────────────── */}
+          <MobileBottomNav />
 
         {/* ── Neo-Brutalist Footer ─────────────────────────────────────────── */}
         <footer className="border-t-2 border-[#111116] bg-white mt-auto">
@@ -73,6 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </footer>
+        </AuthProvider>
       </body>
     </html>
   );
