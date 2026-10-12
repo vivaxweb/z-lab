@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "z-lab-app"
+  },
+  "targets": {
+    "z-lab-app": {
+      "hosting": {
+        "z-lab": [
+          "z-lab"
+        ]
+      }
+    }
+  }
+}

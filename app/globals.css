@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4ecf8;
+  --foreground: #1e1b24;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Plus Jakarta Sans", Roboto, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Soft MindMate Pastel App Canvas */
+.bg-mindmate-canvas {
+  background-color: #f4ecf8;
+}
+
+/* Card with Ultra-Soft Elevation (from MindMate mockup) */
+.mindmate-card {
+  background-color: #ffffff;
+  border-radius: 1.75rem;
+  box-shadow: 0 10px 30px -4px rgba(100, 60, 130, 0.06), 0 4px 12px -2px rgba(100, 60, 130, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.mindmate-card-sm {
+  background-color: #ffffff;
+  border-radius: 1.25rem;
+  box-shadow: 0 6px 20px -2px rgba(100, 60, 130, 0.05);
+}
+
+.mindmate-card-tint {
+  background-color: #f9f7fa;
+  border-radius: 1.5rem;
+}
+
+/* Signature MindMate Lime-to-Pink Gradient Pill Button */
+.btn-mindmate-gradient {
+  background: linear-gradient(90deg, #d7f75b 0%, #fed7aa 50%, #fca5ba 100%);
+  color: #1a1622;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 8px 24px -4px rgba(215, 247, 91, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-mindmate-gradient:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -4px rgba(252, 165, 186, 0.45);
+}
+
+.btn-mindmate-gradient:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px -2px rgba(215, 247, 91, 0.25);
+}
+
+/* Suggestion Sunset Card (from MindMate Screen 2) */
+.bg-mindmate-sunset {
+  background: linear-gradient(90deg, #d8f862 0%, #fce2cd 55%, #fca5ba 100%);
+}
+
+/* Hide scrollbar for clean horizontal chip swiping on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
